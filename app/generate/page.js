@@ -33,9 +33,7 @@ import { useState, useEffect } from "react";
 import { db } from "@/firebase";
 import Head from 'next/head';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import * as pdfjsLib from 'pdfjs-dist/webpack';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
 
 const theme = createTheme({
   typography: {
@@ -82,7 +80,6 @@ export default function Generate() {
   const [difficulty, setDifficulty] = useState("Medium");
   const [lang, setLang] = useState("English");
   const [inputType, setInputType] = useState("topic");
-  const [pdfFile, setPdfFile] = useState(null);
   const [recommendedTopic, setRecommendedTopic] = useState("");
   const router = useRouter();
 
@@ -111,11 +108,6 @@ export default function Generate() {
 
   const handleSubmit = async () => {
     let inputData = text;
-
-    if (inputType === "pdf" && pdfFile) {
-      inputData = await convertPdfToText(pdfFile);
-    }
-
     fetch("/api/generate", {
       method: "POST",
       headers: {
@@ -181,72 +173,6 @@ export default function Generate() {
     router.push(`/flashcards?id=${name}`);
   };
 
-  const readFileAsArrayBuffer = (file, callback) => {
-    const reader = new FileReader();
-    reader.onload = () => callback(null, reader.result);
-    reader.onerror = (error) => callback(error);
-    reader.readAsArrayBuffer(file);
-  };
-  
-  const getDocument = (typedArray, callback) => {
-    const loadingTask = pdfjsLib.getDocument(typedArray);
-    loadingTask.onProgress = (progressData) => {
-      // Handle progress if needed
-    };
-    loadingTask.promise.then(
-      (pdf) => callback(null, pdf),
-      (error) => callback(error)
-    );
-  };
-  
-  const getPageText = (page, callback) => {
-    page.getTextContent().then(
-      (content) => {
-        const pageText = content.items.map(item => item.str).join(' ');
-        callback(null, pageText);
-      },
-      (error) => callback(error)
-    );
-  };
-  
-  const convertPdfToText = (file, callback) => {
-    readFileAsArrayBuffer(file, (error, arrayBuffer) => {
-      if (error) {
-        return callback(error);
-      }
-  
-      const typedArray = new Uint8Array(arrayBuffer);
-      getDocument(typedArray, (error, pdf) => {
-        if (error) {
-          return callback(error);
-        }
-  
-        let text = '';
-        let pagesProcessed = 0;
-  
-        for (let i = 1; i <= pdf.numPages; i++) {
-          pdf.getPage(i).then(
-            (page) => {
-              getPageText(page, (error, pageText) => {
-                if (error) {
-                  return callback(error);
-                }
-  
-                text += pageText + ' ';
-                pagesProcessed++;
-  
-                if (pagesProcessed === pdf.numPages) {
-                  callback(null, text);
-                }
-              });
-            },
-            (error) => callback(error)
-          );
-        }
-      });
-    });
-  };
-    
   return (
     <ThemeProvider theme={theme}>
       <Box sx={{ backgroundColor: '#E5F4FB', minHeight: '100vh' }}>
@@ -346,15 +272,6 @@ export default function Generate() {
               }}>
                 <FormControl component="fieldset" sx={{ mb: 3, border: '2px solid #E54792', borderRadius: 2, p: 2 }}>
                 <FormLabel component="legend" sx={{ color: '#000000', fontWeight: 'bold' }}>Input Type</FormLabel>
-                <RadioGroup
-                  row
-                  value={inputType}
-                  onChange={(e) => setInputType(e.target.value)}
-                  sx={{ '& .MuiFormControlLabel-label': { color: '#000000', fontWeight: 'bold' } }}
-                >
-                  <FormControlLabel value="topic" control={<Radio sx={{ color: '#E54792', '&.Mui-checked': { color: '#E54792' } }} />} label="Enter Topic" />
-                  <FormControlLabel value="pdf" control={<Radio sx={{ color: '#E54792', '&.Mui-checked': { color: '#E54792' } }} />} label="Upload PDF" />
-                </RadioGroup>
               </FormControl>
 
                 {inputType === "topic" ? (
@@ -376,7 +293,6 @@ export default function Generate() {
                 ) : (
                   <TextField
                     type="file"
-                    onChange={(e) => setPdfFile(e.target.files[0])}
                     fullWidth
                     variant="outlined"
                     sx={{
