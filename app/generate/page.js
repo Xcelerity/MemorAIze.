@@ -188,31 +188,65 @@ export default function Generate() {
     reader.readAsArrayBuffer(file);
   };
   
+  const getDocument = (typedArray, callback) => {
+    const loadingTask = pdfjsLib.getDocument(typedArray);
+    loadingTask.onProgress = (progressData) => {
+      // Handle progress if needed
+    };
+    loadingTask.promise.then(
+      (pdf) => callback(null, pdf),
+      (error) => callback(error)
+    );
+  };
+  
+  const getPageText = (page, callback) => {
+    page.getTextContent().then(
+      (content) => {
+        const pageText = content.items.map(item => item.str).join(' ');
+        callback(null, pageText);
+      },
+      (error) => callback(error)
+    );
+  };
+  
   const convertPdfToText = (file, callback) => {
-    readFileAsArrayBuffer(file, async (error, arrayBuffer) => {
+    readFileAsArrayBuffer(file, (error, arrayBuffer) => {
       if (error) {
         return callback(error);
       }
   
-      try {
-        const typedArray = new Uint8Array(arrayBuffer);
-        const pdf = await pdfjsLib.getDocument(typedArray).promise;
-        let text = '';
-  
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const content = await page.getTextContent();
-          const pageText = content.items.map(item => item.str).join(' ');
-          text += pageText + ' ';
+      const typedArray = new Uint8Array(arrayBuffer);
+      getDocument(typedArray, (error, pdf) => {
+        if (error) {
+          return callback(error);
         }
   
-        callback(null, text);
-      } catch (err) {
-        callback(err);
-      }
+        let text = '';
+        let pagesProcessed = 0;
+  
+        for (let i = 1; i <= pdf.numPages; i++) {
+          pdf.getPage(i).then(
+            (page) => {
+              getPageText(page, (error, pageText) => {
+                if (error) {
+                  return callback(error);
+                }
+  
+                text += pageText + ' ';
+                pagesProcessed++;
+  
+                if (pagesProcessed === pdf.numPages) {
+                  callback(null, text);
+                }
+              });
+            },
+            (error) => callback(error)
+          );
+        }
+      });
     });
   };
-  
+    
   return (
     <ThemeProvider theme={theme}>
       <Box sx={{ backgroundColor: '#E5F4FB', minHeight: '100vh' }}>
