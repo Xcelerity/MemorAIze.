@@ -181,32 +181,38 @@ export default function Generate() {
     router.push(`/flashcards?id=${name}`);
   };
 
-  const readFileAsArrayBuffer = (file) => {
+  const readFileAsArrayBuffer = (file, callback) => {
     const reader = new FileReader();
-    return new Promise((resolve, reject) => {
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
-      reader.readAsArrayBuffer(file);
+    reader.onload = () => callback(null, reader.result);
+    reader.onerror = (error) => callback(error);
+    reader.readAsArrayBuffer(file);
+  };
+  
+  const convertPdfToText = (file, callback) => {
+    readFileAsArrayBuffer(file, async (error, arrayBuffer) => {
+      if (error) {
+        return callback(error);
+      }
+  
+      try {
+        const typedArray = new Uint8Array(arrayBuffer);
+        const pdf = await pdfjsLib.getDocument(typedArray).promise;
+        let text = '';
+  
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          const pageText = content.items.map(item => item.str).join(' ');
+          text += pageText + ' ';
+        }
+  
+        callback(null, text);
+      } catch (err) {
+        callback(err);
+      }
     });
   };
   
-  const convertPdfToText = async (file) => {
-    const arrayBuffer = await readFileAsArrayBuffer(file);
-    const typedArray = new Uint8Array(arrayBuffer);
-    const pdf = await pdfjsLib.getDocument(typedArray).promise;
-    let text = '';
-  
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      const pageText = content.items.map(item => item.str).join(' ');
-      text += pageText + ' ';
-    }
-  
-    return text;
-  };
-  
-
   return (
     <ThemeProvider theme={theme}>
       <Box sx={{ backgroundColor: '#E5F4FB', minHeight: '100vh' }}>
