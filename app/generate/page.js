@@ -29,11 +29,12 @@ import {
 } from "@mui/material";
 import { collection, writeBatch, setDoc, doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { db } from "@/firebase";
 import Head from 'next/head';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import * as pdfjsLib from 'pdfjs-dist/webpack';
+import Image from 'next/image';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
 
@@ -86,13 +87,7 @@ export default function Generate() {
   const [recommendedTopic, setRecommendedTopic] = useState("");
   const router = useRouter();
 
-  useEffect(() => {
-    if (user) {
-      fetchRecommendedTopic();
-    }
-  }, [user]);
-
-  const fetchRecommendedTopic = async () => {
+  const fetchRecommendedTopic = useCallback(async () => {
     const userDocRef = doc(collection(db, "users"), user.id);
     const docSnap = await getDoc(userDocRef);
 
@@ -107,7 +102,13 @@ export default function Generate() {
       const data = await response.json();
       setRecommendedTopic(data.recommendedTopic);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchRecommendedTopic();
+    }
+  }, [user, fetchRecommendedTopic]);
 
   const handleSubmit = async () => {
     let inputData = text;
@@ -540,6 +541,8 @@ export default function Generate() {
     </ThemeProvider>
   );
 }
+
+
 
 
 
