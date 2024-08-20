@@ -35,8 +35,11 @@ import Head from 'next/head';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import * as pdfjsLib from 'pdfjs-dist/webpack';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
+
+const PdfViewerComponent = dynamic(() => import("./PdfViewer"), { ssr: false });
 
 const theme = createTheme({
   typography: {
@@ -541,6 +544,8 @@ export default function Generate() {
     </ThemeProvider>
   );
 }
+
+
 
 
 
