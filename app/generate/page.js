@@ -33,7 +33,8 @@ import { useState, useEffect } from "react";
 import { db } from "@/firebase";
 import Head from 'next/head';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-
+import mammoth from "mammoth";
+import Tesseract from "tesseract.js";
 
 const theme = createTheme({
   typography: {
@@ -80,6 +81,7 @@ export default function Generate() {
   const [difficulty, setDifficulty] = useState("Medium");
   const [lang, setLang] = useState("English");
   const [inputType, setInputType] = useState("topic");
+  const [file, setFile] = useState(null);
   const [recommendedTopic, setRecommendedTopic] = useState("");
   const router = useRouter();
 
@@ -106,14 +108,36 @@ export default function Generate() {
     }
   };
 
+  const extractTextFromWord = async (file) => {
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return result.value;
+  };
+
+  const extractTextFromImage = async (file) => {
+    const result = await Tesseract.recognize(file, 'eng');
+    return result.data.text;
+  };
+
   const handleSubmit = async () => {
     let inputData = text;
+    let fileType = null;
+
+    if (inputType !== "topic" && file) {
+      if (inputType === "word") {
+        inputData = await extractTextFromWord(file);
+      } else if (inputType === "image") {
+        inputData = await extractTextFromImage(file);
+      } 
+      fileType = inputType;
+    }
+
     fetch("/api/generate", {
       method: "POST",
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ data: inputData, lang, numFlashcards, difficulty, answerType }),
+      body: JSON.stringify({ data: inputData, lang, numFlashcards, difficulty, answerType, fileType }),
     })
       .then((res) => res.json())
       .then((data) => {
@@ -271,8 +295,17 @@ export default function Generate() {
                 alignItems: 'center'
               }}>
                 <FormControl component="fieldset" sx={{ mb: 3, border: '2px solid #E54792', borderRadius: 2, p: 2 }}>
-                <FormLabel component="legend" sx={{ color: '#000000', fontWeight: 'bold' }}>Input Type</FormLabel>
-              </FormControl>
+                  <FormLabel component="legend" sx={{ color: '#000000', fontWeight: 'bold' }}>Input Type</FormLabel>
+                  <RadioGroup
+                    row
+                    value={inputType}
+                    onChange={(e) => setInputType(e.target.value)}
+                  >
+                    <FormControlLabel value="topic" control={<Radio />} label="Type a Topic" />
+                    <FormControlLabel value="word" control={<Radio />} label="Upload Word Document" />
+                    <FormControlLabel value="image" control={<Radio />} label="Upload Image" />
+                  </RadioGroup>
+                </FormControl>
 
                 {inputType === "topic" ? (
                   <TextField
@@ -295,6 +328,7 @@ export default function Generate() {
                     type="file"
                     fullWidth
                     variant="outlined"
+                    onChange={(e) => setFile(e.target.files[0])}
                     sx={{
                       mb: 3, 
                       backgroundColor: '#E5F4FB', 
@@ -323,42 +357,38 @@ export default function Generate() {
                     <MenuItem value="English">English</MenuItem>
                     <MenuItem value="French">French</MenuItem>
                     <MenuItem value="German">German</MenuItem>
-                    <MenuItem value="Gujarati">Gujarati</MenuItem>
                     <MenuItem value="Hindi">Hindi</MenuItem>
                     <MenuItem value="Italian">Italian</MenuItem>
                     <MenuItem value="Japanese">Japanese</MenuItem>
-                    <MenuItem value="Kannada">Kannada</MenuItem>
                     <MenuItem value="Korean">Korean</MenuItem>
-                    <MenuItem value="Malayalam">Malayalam</MenuItem>
-                    <MenuItem value="Marathi">Marathi</MenuItem>
-                    <MenuItem value="Odia">Odia</MenuItem>
                     <MenuItem value="Portuguese">Portuguese</MenuItem>
-                    <MenuItem value="Punjabi">Punjabi</MenuItem>
                     <MenuItem value="Russian">Russian</MenuItem>
                     <MenuItem value="Spanish">Spanish</MenuItem>
                     <MenuItem value="Tamil">Tamil</MenuItem>
                     <MenuItem value="Telugu">Telugu</MenuItem>
                     <MenuItem value="Urdu">Urdu</MenuItem>
-                    <MenuItem value="Vietnamese">Vietnamese</MenuItem>
                   </Select>
                 </FormControl>
-                <Grid container spacing={3} sx={{ mb: 3 }}>
-                  <Grid item xs={12} sm={12}>
-                    <TextField
-                      value={numFlashcards}
-                      onChange={(e) => setNumFlashcards(e.target.value)}
-                      label="Number of Flashcards"
-                      type="number"
-                      fullWidth
-                      variant="outlined"
-                      sx={{
-                        backgroundColor: '#E5F4FB', 
-                        '& .MuiOutlinedInput-root': { borderRadius: 2 },
-                        '& .MuiInputLabel-root': { color: '#000' }
-                      }}
-                    />
-                  </Grid>
-                </Grid>  
+
+                <FormControl fullWidth sx={{ mb: 3 }}>
+                  <InputLabel sx={{ color: '#000' }}>Number of Flashcards</InputLabel>
+                  <Select
+                    value={numFlashcards}
+                    onChange={(e) => setNumFlashcards(e.target.value)}
+                    label="Number of Flashcards"
+                    sx={{
+                      backgroundColor: '#E5F4FB',
+                      '& .MuiOutlinedInput-root': { borderRadius: 8 },
+                      '& .MuiInputLabel-root': { color: '#000' }
+                    }}
+                  >
+                    <MenuItem value={5}>5</MenuItem>
+                    <MenuItem value={10}>10</MenuItem>
+                    <MenuItem value={15}>15</MenuItem>
+                    <MenuItem value={20}>20</MenuItem>
+                  </Select>
+                </FormControl>
+
                 <FormControl fullWidth sx={{ mb: 3 }}>
                   <InputLabel sx={{ color: '#000' }}>Difficulty</InputLabel>
                   <Select
@@ -392,7 +422,6 @@ export default function Generate() {
                     <MenuItem value="True or False">True or False</MenuItem>
                     <MenuItem value="Multiple Choice">Multiple Choice</MenuItem>
                     <MenuItem value="Short Answer">Short Answer</MenuItem>
-                    <MenuItem value="Picture">Picture</MenuItem>
                   </Select>
                 </FormControl>
 
@@ -400,14 +429,7 @@ export default function Generate() {
                   variant="contained"
                   color="secondary"
                   onClick={handleSubmit}
-                  sx={{
-                    backgroundColor: '#E54792',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    borderRadius: 5,
-                    mt: 2,
-                    mb: 2,
-                  }}
+                  sx={{ fontWeight: 'bold', borderRadius: 5 }}
                 >
                   Generate Flashcards
                 </Button>
@@ -415,25 +437,28 @@ export default function Generate() {
             </Box>
 
             {flashcards.length > 0 && (
-              <Box sx={{ mt: 4 }}>
-                <Typography variant="h5" sx={{ color: '#E54792', fontWeight: 'bold', mb: 3 }}>
+              <Box sx={{ mt: 6 }}>
+                <Typography variant="h4" sx={{ color: '#E54792', fontWeight: 'bold', mb: 3 }}>
                   Generated Flashcards
                 </Typography>
-                <Grid container spacing={2}>
+                <Grid container spacing={3}>
                   {flashcards.map((flashcard, index) => (
                     <Grid item xs={12} sm={6} md={4} key={index}>
                       <Card
                         onClick={() => handleCardClick(index)}
                         sx={{
                           backgroundColor: flipped[index] ? '#E54792' : '#0F9ED5',
-                          color: 'white',
-                          borderRadius: 5,
+                          color: '#fff',
+                          borderRadius: 8,
                           boxShadow: 3,
                           cursor: 'pointer',
+                          transform: flipped[index] ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                          transition: 'transform 0.6s',
+                          transformStyle: 'preserve-3d',
                         }}
                       >
                         <CardActionArea>
-                          <CardContent>
+                          <CardContent sx={{ textAlign: 'center', p: 4 }}>
                             <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                               {flipped[index] ? flashcard.back : flashcard.front}
                             </Typography>
@@ -447,13 +472,7 @@ export default function Generate() {
                   variant="contained"
                   color="secondary"
                   onClick={handleOpen}
-                  sx={{
-                    backgroundColor: '#E54792',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    borderRadius: 5,
-                    mt: 4,
-                  }}
+                  sx={{ mt: 4, fontWeight: 'bold', borderRadius: 5 }}
                 >
                   Save Flashcards
                 </Button>
@@ -464,38 +483,45 @@ export default function Generate() {
               <DialogTitle>Save Flashcards</DialogTitle>
               <DialogContent>
                 <DialogContentText>
-                  Enter a name for your flashcard collection.
+                  Please enter a name for your flashcard collection.
                 </DialogContentText>
                 <TextField
-                  autoFocus
-                  margin="dense"
-                  label="Collection Name"
-                  fullWidth
-                  variant="outlined"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  sx={{
-                    backgroundColor: '#E5F4FB',
-                    '& .MuiOutlinedInput-root': { borderRadius: 8 },
-                    '& .MuiInputLabel-root': { color: '#000' }
-                  }}
-                />
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={handleClose} color="primary">
-                  Cancel
-                </Button>
-                <Button onClick={saveFlashcard} color="primary">
-                  Save
-                </Button>
-              </DialogActions>
-            </Dialog>
+                    autoFocus
+                    margin="dense"
+                    label="Collection Name"
+                    type="text"
+                    fullWidth
+                    variant="outlined"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    sx={{
+                      backgroundColor: '#E5F4FB',
+                      '& .MuiOutlinedInput-root': { borderRadius: 2 },
+                      '& .MuiInputLabel-root': { color: '#000' }
+                    }}
+                  />
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={handleClose} color="primary">
+                    Cancel
+                  </Button>
+                  <Button onClick={saveFlashcard} color="primary">
+                    Save
+                  </Button>
+                </DialogActions>
+              </Dialog>
+            </Container>
           </Container>
-        </Container>
-      </Box>
-    </ThemeProvider>
-  );
-}
+        </Box>
+      </ThemeProvider>
+    );
+  }
+
+
+
+
+
+
 
 
 
