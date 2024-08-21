@@ -294,19 +294,45 @@ export default function Generate() {
                 flexDirection: 'column',
                 alignItems: 'center'
               }}>
-                <FormControl component="fieldset" sx={{ mb: 3, border: '2px solid #E54792', borderRadius: 2, p: 2 }}>
-                  <FormLabel component="legend" sx={{ color: '#000000', fontWeight: 'bold' }}>Input Type</FormLabel>
-                  <RadioGroup
-                    row
-                    value={inputType}
-                    onChange={(e) => setInputType(e.target.value)}
-                  >
-                    <FormControlLabel value="topic" control={<Radio />} label="Type a Topic" />
-                    <FormControlLabel value="word" control={<Radio />} label="Upload Word Document" />
-                    <FormControlLabel value="image" control={<Radio />} label="Upload Image" />
-                  </RadioGroup>
-                </FormControl>
-
+                
+                <FormControl component="fieldset" sx={{ mb: 3, borderRadius: 8, p: 2, backgroundColor: '#E54792', color: 'white' }}>
+                <RadioGroup
+                  row
+                  value={inputType}
+                  onChange={(e) => setInputType(e.target.value)}
+                  sx={{ 
+                    '& .MuiFormControlLabel-root': { 
+                      color: 'white', 
+                      fontWeight: 'bold',
+                      '& .MuiRadio-root': {
+                        color: 'white',
+                        '&.Mui-checked': {
+                          color: 'white'
+                        }
+                      }
+                    }
+                  }}
+                >
+                  <FormControlLabel 
+                    value="topic" 
+                    control={<Radio />} 
+                    label="Enter Topic"
+                    sx={{ color: 'white' }} 
+                  />
+                  <FormControlLabel 
+                    value="image" 
+                    control={<Radio />} 
+                    label="Upload Image"
+                    sx={{ color: 'white' }} 
+                  />
+                  <FormControlLabel 
+                    value="word" 
+                    control={<Radio />} 
+                    label="Upload Word Document"
+                    sx={{ color: 'white' }} 
+                  />
+                </RadioGroup>
+              </FormControl>
                 {inputType === "topic" ? (
                   <TextField
                     value={text}
@@ -357,38 +383,42 @@ export default function Generate() {
                     <MenuItem value="English">English</MenuItem>
                     <MenuItem value="French">French</MenuItem>
                     <MenuItem value="German">German</MenuItem>
+                    <MenuItem value="Gujarati">Gujarati</MenuItem>
                     <MenuItem value="Hindi">Hindi</MenuItem>
                     <MenuItem value="Italian">Italian</MenuItem>
                     <MenuItem value="Japanese">Japanese</MenuItem>
+                    <MenuItem value="Kannada">Kannada</MenuItem>
                     <MenuItem value="Korean">Korean</MenuItem>
+                    <MenuItem value="Malayalam">Malayalam</MenuItem>
+                    <MenuItem value="Marathi">Marathi</MenuItem>
+                    <MenuItem value="Odia">Odia</MenuItem>
                     <MenuItem value="Portuguese">Portuguese</MenuItem>
+                    <MenuItem value="Punjabi">Punjabi</MenuItem>
                     <MenuItem value="Russian">Russian</MenuItem>
                     <MenuItem value="Spanish">Spanish</MenuItem>
                     <MenuItem value="Tamil">Tamil</MenuItem>
                     <MenuItem value="Telugu">Telugu</MenuItem>
                     <MenuItem value="Urdu">Urdu</MenuItem>
+                    <MenuItem value="Vietnamese">Vietnamese</MenuItem>
                   </Select>
                 </FormControl>
-
-                <FormControl fullWidth sx={{ mb: 3 }}>
-                  <InputLabel sx={{ color: '#000' }}>Number of Flashcards</InputLabel>
-                  <Select
-                    value={numFlashcards}
-                    onChange={(e) => setNumFlashcards(e.target.value)}
-                    label="Number of Flashcards"
-                    sx={{
-                      backgroundColor: '#E5F4FB',
-                      '& .MuiOutlinedInput-root': { borderRadius: 8 },
-                      '& .MuiInputLabel-root': { color: '#000' }
-                    }}
-                  >
-                    <MenuItem value={5}>5</MenuItem>
-                    <MenuItem value={10}>10</MenuItem>
-                    <MenuItem value={15}>15</MenuItem>
-                    <MenuItem value={20}>20</MenuItem>
-                  </Select>
-                </FormControl>
-
+                <Grid container spacing={3} sx={{ mb: 3 }}>
+                  <Grid item xs={12} sm={12}>
+                    <TextField
+                      value={numFlashcards}
+                      onChange={(e) => setNumFlashcards(e.target.value)}
+                      label="Number of Flashcards"
+                      type="number"
+                      fullWidth
+                      variant="outlined"
+                      sx={{
+                        backgroundColor: '#E5F4FB', 
+                        '& .MuiOutlinedInput-root': { borderRadius: 2 },
+                        '& .MuiInputLabel-root': { color: '#000' }
+                      }}
+                    />
+                  </Grid>
+                </Grid>  
                 <FormControl fullWidth sx={{ mb: 3 }}>
                   <InputLabel sx={{ color: '#000' }}>Difficulty</InputLabel>
                   <Select
@@ -419,9 +449,10 @@ export default function Generate() {
                       '& .MuiInputLabel-root': { color: '#000' }
                     }}
                   >
-                    <MenuItem value="True or False">True or False</MenuItem>
-                    <MenuItem value="Multiple Choice">Multiple Choice</MenuItem>
+                    <MenuItem value="True or False (only True or False)">True or False</MenuItem>
+                    <MenuItem value="Multiple Choice (Make questions having multiple choice options to choose for answer)">Multiple Choice</MenuItem>
                     <MenuItem value="Short Answer">Short Answer</MenuItem>
+                    <MenuItem value="Numerical Answer(Answer should be a number)">Numerical Answer</MenuItem>
                   </Select>
                 </FormControl>
 
@@ -429,7 +460,14 @@ export default function Generate() {
                   variant="contained"
                   color="secondary"
                   onClick={handleSubmit}
-                  sx={{ fontWeight: 'bold', borderRadius: 5 }}
+                  sx={{
+                    backgroundColor: '#E54792',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    borderRadius: 5,
+                    mt: 2,
+                    mb: 2,
+                  }}
                 >
                   Generate Flashcards
                 </Button>
@@ -437,29 +475,31 @@ export default function Generate() {
             </Box>
 
             {flashcards.length > 0 && (
-              <Box sx={{ mt: 6 }}>
-                <Typography variant="h4" sx={{ color: '#E54792', fontWeight: 'bold', mb: 3 }}>
+              <Box sx={{ mt: 12, textAlign: 'center' }}>
+                <Typography variant="h6" sx={{ color: '#E54792', fontWeight: 'bold', textAlign: 'center', mb: 3, fontSize: '1.5rem' }}>
                   Generated Flashcards
                 </Typography>
-                <Grid container spacing={3}>
+                <Grid container spacing={2}>
                   {flashcards.map((flashcard, index) => (
                     <Grid item xs={12} sm={6} md={4} key={index}>
                       <Card
                         onClick={() => handleCardClick(index)}
                         sx={{
                           backgroundColor: flipped[index] ? '#E54792' : '#0F9ED5',
-                          color: '#fff',
-                          borderRadius: 8,
-                          boxShadow: 3,
+                          color: 'white',
+                          borderRadius: 5,
+                          border: '10px solid white', 
+                          boxShadow: 2, 
                           cursor: 'pointer',
-                          transform: flipped[index] ? 'rotateY(180deg)' : 'rotateY(0deg)',
-                          transition: 'transform 0.6s',
-                          transformStyle: 'preserve-3d',
+                          minHeight: '150px', 
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                         }}
                       >
                         <CardActionArea>
-                          <CardContent sx={{ textAlign: 'center', p: 4 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                          <CardContent>
+                            <Typography variant="h6" sx={{ fontWeight: 'normal' }}>
                               {flipped[index] ? flashcard.back : flashcard.front}
                             </Typography>
                           </CardContent>
@@ -472,50 +512,58 @@ export default function Generate() {
                   variant="contained"
                   color="secondary"
                   onClick={handleOpen}
-                  sx={{ mt: 4, fontWeight: 'bold', borderRadius: 5 }}
+                  sx={{
+                    backgroundColor: '#E54792',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    borderRadius: 5,
+                    mt: 4,
+                  }}
                 >
                   Save Flashcards
                 </Button>
               </Box>
+
             )}
 
             <Dialog open={open} onClose={handleClose}>
               <DialogTitle>Save Flashcards</DialogTitle>
               <DialogContent>
                 <DialogContentText>
-                  Please enter a name for your flashcard collection.
+                  Enter a name for your flashcard collection.
                 </DialogContentText>
                 <TextField
-                    autoFocus
-                    margin="dense"
-                    label="Collection Name"
-                    type="text"
-                    fullWidth
-                    variant="outlined"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    sx={{
-                      backgroundColor: '#E5F4FB',
-                      '& .MuiOutlinedInput-root': { borderRadius: 2 },
-                      '& .MuiInputLabel-root': { color: '#000' }
-                    }}
-                  />
-                </DialogContent>
-                <DialogActions>
-                  <Button onClick={handleClose} color="primary">
-                    Cancel
-                  </Button>
-                  <Button onClick={saveFlashcard} color="primary">
-                    Save
-                  </Button>
-                </DialogActions>
-              </Dialog>
-            </Container>
+                  autoFocus
+                  margin="dense"
+                  label="Collection Name"
+                  fullWidth
+                  variant="outlined"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  sx={{
+                    backgroundColor: '#E5F4FB',
+                    '& .MuiOutlinedInput-root': { borderRadius: 8 },
+                    '& .MuiInputLabel-root': { color: '#000' }
+                  }}
+                />
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={handleClose} color="primary">
+                  Cancel
+                </Button>
+                <Button onClick={saveFlashcard} color="primary">
+                  Save
+                </Button>
+              </DialogActions>
+            </Dialog>
           </Container>
-        </Box>
-      </ThemeProvider>
-    );
-  }
+        </Container>
+      </Box>
+    </ThemeProvider>
+  );
+}
+
+
 
 
 

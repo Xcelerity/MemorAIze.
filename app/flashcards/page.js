@@ -218,10 +218,10 @@ export default function Flashcards() {
               <Grid container spacing={3} sx={{ mt: 4 }}>
                 {collections.map((collection, index) => (
                   <Grid item xs={12} sm={6} md={4} key={index}>
-                    <Card sx={{ boxShadow: 1, border: '1px solid transparent', borderRadius: 2 }}>
+                    <Card sx={{ boxShadow: 1, borderRadius: 2 }}>
                       <CardActionArea onClick={() => handleCollectionClick(collection.name)}>
                         <CardContent>
-                          <Typography variant="h5" component="div" sx={{ color: 'white', backgroundColor: '#E54792', padding: 2, borderRadius: 2 }}>
+                          <Typography variant="h5" component="div" sx={{ color: 'white', backgroundColor: '#E54792', padding: 6, borderRadius: 0 }}>
                             {collection.name}
                           </Typography>
                         </CardContent>
