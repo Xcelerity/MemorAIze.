@@ -1,10 +1,9 @@
-'use client';
-
+"use client";
 import { useUser } from '@clerk/nextjs';
 import { useEffect, useState } from 'react';
-import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, updateDoc, deleteDoc, addDoc } from 'firebase/firestore';
 import { db } from '@/firebase';
-import { Container, Grid, Box, Typography, Card, CardActionArea, CardContent, AppBar, Toolbar, Button, TextField, IconButton, Menu, MenuItem, Switch, FormControlLabel } from '@mui/material';
+import { Container, Grid, Box, Typography, Card, CardActionArea, CardContent, AppBar, Toolbar, Button, TextField, IconButton, Menu, MenuItem, Switch, FormControlLabel, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CirclePicker } from 'react-color';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -12,6 +11,7 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 export default function Flashcards() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -25,6 +25,11 @@ export default function Flashcards() {
   const [anchorElSort, setAnchorElSort] = useState(null);
   const [anchorElColor, setAnchorElColor] = useState(null);
   const [audioMode, setAudioMode] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [newFlashcard, setNewFlashcard] = useState({ front: '', back: '' });
+  const [openCollectionDialog, setOpenCollectionDialog] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState('');
   const searchParams = useSearchParams();
   const search = searchParams.get('id');
   const router = useRouter();
@@ -124,10 +129,104 @@ export default function Flashcards() {
     setAudioMode(!audioMode);
   };
 
+  const handleDeleteModeToggle = () => {
+    setDeleteMode(!deleteMode);
+  };
+
   const handleAudioPlay = (text, event) => {
-    event.stopPropagation(); 
+    event.stopPropagation();
     const utterance = new SpeechSynthesisUtterance(text);
     speechSynthesis.speak(utterance);
+  };
+
+  const handleDeleteFlashcard = async (flashcardId) => {
+    if (!user || !search) {
+      return;
+    }
+
+    try {
+      const flashcardDocRef = doc(collection(doc(collection(db, 'users'), user.id), search), flashcardId);
+      await deleteDoc(flashcardDocRef);
+      setFlashcards((prev) => prev.filter((flashcard) => flashcard.id !== flashcardId));
+    } catch (error) {
+      console.error("Error deleting flashcard: ", error);
+    }
+  };
+
+  const handleDeleteCollection = async (collectionName) => {
+    if (!user) {
+      return;
+    }
+
+    try {
+      const userDocRef = doc(collection(db, 'users'), user.id);
+      const docSnap = await getDoc(userDocRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const updatedCollections = data.flashcards.filter(col => col.name !== collectionName);
+
+        await updateDoc(userDocRef, { flashcards: updatedCollections });
+        setCollections(updatedCollections);
+      }
+    } catch (error) {
+      console.error("Error deleting collection: ", error);
+    }
+  };
+
+  const handleOpenDialog = () => {
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+  };
+
+  const handleCreateFlashcard = async () => {
+    if (!user || !search || !newFlashcard.front || !newFlashcard.back) {
+      return;
+    }
+
+    try {
+      const colRef = collection(doc(collection(db, 'users'), user.id), search);
+      await addDoc(colRef, newFlashcard);
+      setFlashcards((prev) => [...prev, newFlashcard]);
+      setNewFlashcard({ front: '', back: '' });
+      handleCloseDialog();
+    } catch (error) {
+      console.error("Error creating flashcard: ", error);
+    }
+  };
+
+  const handleOpenCollectionDialog = () => {
+    setOpenCollectionDialog(true);
+  };
+
+  const handleCloseCollectionDialog = () => {
+    setOpenCollectionDialog(false);
+  };
+
+  const handleCreateCollection = async () => {
+    if (!user || !newCollectionName) {
+      return;
+    }
+
+    try {
+      const userDocRef = doc(collection(db, 'users'), user.id);
+      const docSnap = await getDoc(userDocRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const updatedCollections = [...data.flashcards, { name: newCollectionName }];
+
+        await updateDoc(userDocRef, { flashcards: updatedCollections });
+        setCollections(updatedCollections);
+        setNewCollectionName('');
+        handleCloseCollectionDialog();
+      }
+    } catch (error) {
+      console.error("Error creating collection: ", error);
+    }
   };
 
   if (!isLoaded) {
@@ -218,7 +317,7 @@ export default function Flashcards() {
               <Grid container spacing={3} sx={{ mt: 4 }}>
                 {collections.map((collection, index) => (
                   <Grid item xs={12} sm={6} md={4} key={index}>
-                    <Card sx={{ boxShadow: 1, borderRadius: 2 }}>
+                    <Card sx={{ boxShadow: 1, borderRadius: 2, position: 'relative' }}>
                       <CardActionArea onClick={() => handleCollectionClick(collection.name)}>
                         <CardContent>
                           <Typography variant="h5" component="div" sx={{ color: 'white', backgroundColor: '#E54792', padding: 6, borderRadius: 0 }}>
@@ -226,11 +325,24 @@ export default function Flashcards() {
                           </Typography>
                         </CardContent>
                       </CardActionArea>
+                      <IconButton
+                        sx={{ position: 'absolute', bottom: 8, right: 8 }}
+                        onClick={() => handleDeleteCollection(collection.name)}
+                      >
+                        <DeleteIcon sx={{ color: '#FFFFFF' }} />
+                      </IconButton>
                     </Card>
                   </Grid>
                 ))}
               </Grid>
             )}
+            <Button
+              onClick={handleOpenCollectionDialog}
+              sx={{ mt: 4, backgroundColor: '#0F9ED5', color: 'white', fontWeight: 'bold', borderRadius: 2, ':hover': { backgroundColor: '#0D8CC7' } }}
+              variant="contained"
+            >
+              Add Collection
+            </Button>
           </>
         ) : (
           <Box sx={{ width: '100%', mb: 6 }}>
@@ -290,11 +402,16 @@ export default function Flashcards() {
                 control={<Switch checked={audioMode} onChange={handleAudioToggle} />}
                 label="Toggle Audio"
               />
+              <Typography variant="h6" sx={{ color: '#000', mt: 2, mb: 2 }}>Delete Mode</Typography>
+              <FormControlLabel
+                control={<Switch checked={deleteMode} onChange={handleDeleteModeToggle} />}
+                label="Toggle Delete"
+              />
             </Menu>
             <Grid container spacing={3} sx={{ mt: 4 }}>
               {flashcards.map((flashcard, index) => (
                 <Grid item xs={12} sm={6} md={4} key={index}>
-                  <Card sx={{ boxShadow: 1, border: 'none', borderRadius: 2 }}>
+                  <Card sx={{ boxShadow: 1, border: 'none', borderRadius: 2, position: 'relative' }}>
                     <CardActionArea onClick={() => handleCardClick(index)}>
                       <CardContent>
                         <Box
@@ -358,18 +475,101 @@ export default function Flashcards() {
                                   <VolumeUpIcon sx={{ color: 'white' }} />
                                 </IconButton>
                               )}
-                            </div>
+                              </div>
                           </div>
                         </Box>
                       </CardContent>
                     </CardActionArea>
+                    {deleteMode && (
+                      <IconButton
+                        sx={{ position: 'absolute', bottom: 8, right: 8 }}
+                        onClick={() => handleDeleteFlashcard(flashcard.id)}
+                      >
+                        <DeleteIcon sx={{ color: '#FFFFFF' }} />
+                      </IconButton>
+                    )}
                   </Card>
                 </Grid>
               ))}
             </Grid>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+              <Button
+                onClick={handleOpenDialog}
+                sx={{ backgroundColor: '#0F9ED5', color: 'white', fontWeight: 'bold', borderRadius: 2, ':hover': { backgroundColor: '#0D8CC7' } }}
+                variant="contained"
+              >
+                Add Flashcard
+              </Button>
+            </Box>
           </Box>
         )}
       </Box>
+
+      <Dialog open={openDialog} onClose={handleCloseDialog}>
+        <DialogTitle>Add New Flashcard</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Please enter the front and back text for the new flashcard.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Front"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newFlashcard.front}
+            onChange={(e) => setNewFlashcard({ ...newFlashcard, front: e.target.value })}
+          />
+          <TextField
+            margin="dense"
+            label="Back"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newFlashcard.back}
+            onChange={(e) => setNewFlashcard({ ...newFlashcard, back: e.target.value })}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleCreateFlashcard} color="primary">
+            Add
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={openCollectionDialog} onClose={handleCloseCollectionDialog}>
+        <DialogTitle>Add New Collection</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Please enter the name for the new collection.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Collection Name"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newCollectionName}
+            onChange={(e) => setNewCollectionName(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseCollectionDialog} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleCreateCollection} color="primary">
+            Add
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }
+
+
+
